@@ -312,7 +312,7 @@ function App() {
 
       <nav className="nav-bar">
         <button
-          className={`nav-btn ${screen === 'modes' || screen === 'capture' ? 'active' : ''}`}
+          className={`nav-btn ${screen === 'modes' ? 'active' : ''}`}
           onClick={() => setScreen('modes')}
           aria-label="Night Mode"
         >
