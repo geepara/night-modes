@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, type Dispatch, type SetStateAction, type KeyboardEvent } from 'react'
+import { Sheet, SheetContent } from '@/components/ui/sheet'
 
 // --- Types ---
 
@@ -8,7 +9,7 @@ interface Idea {
   timestamp: string
 }
 
-type Screen = 'capture' | 'modes' | 'ideas' | 'settings' | 'weekend'
+type Screen = 'modes' | 'ideas' | 'settings' | 'weekend'
 type Mode = 'recovery' | 'recovery-creation' | 'ambition'
 
 interface ModeInfo {
@@ -64,59 +65,10 @@ function useLocalStorage<T>(key: string, initialValue: T): [T, Dispatch<SetState
 
 // --- Components ---
 
-function CaptureScreen() {
-  const [text, setText] = useState('')
-  const [ideas, setIdeas] = useLocalStorage<Idea[]>('night-modes-ideas', [])
-  const inputRef = useRef<HTMLTextAreaElement>(null)
-
-  const handleCapture = () => {
-    if (!text.trim()) return
-
-    const newIdea: Idea = {
-      id: Date.now(),
-      text: text.trim(),
-      timestamp: new Date().toISOString()
-    }
-
-    setIdeas([newIdea, ...ideas])
-    setText('')
-    inputRef.current?.focus()
-  }
-
-  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && e.metaKey) {
-      handleCapture()
-    }
-  }
-
-  return (
-    <div className="flex flex-1 flex-col">
-      <textarea
-        ref={inputRef}
-        className="w-full min-h-[120px] p-4 text-base font-[inherit] bg-glass-bg backdrop-blur-[20px] border border-glass-border rounded-2xl text-text-primary resize-none outline-none transition-[border-color,background] duration-200 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)] focus:border-[rgba(255,255,255,0.25)] focus:bg-[rgba(255,255,255,0.08)] placeholder:text-text-muted"
-        placeholder="Capture an idea..."
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        onKeyDown={handleKeyDown}
-        autoFocus
-      />
-      <div className="flex gap-3 mt-4">
-        <button
-          className="flex-1 px-6 py-4 text-base font-medium font-[inherit] border-none rounded-[14px] cursor-pointer transition-all duration-200 bg-[rgba(255,255,255,0.12)] backdrop-blur-[20px] text-text-primary border border-glass-border shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)] active:scale-[0.98] active:bg-[rgba(255,255,255,0.18)] disabled:opacity-40 disabled:cursor-not-allowed touch-manipulation"
-          onClick={handleCapture}
-          disabled={!text.trim()}
-        >
-          Capture
-        </button>
-      </div>
-    </div>
-  )
-}
-
 function ModeSelection({ currentMode, onSelectMode, onNavigate }: ModeSelectionProps) {
   const handleSelect = (mode: Mode) => {
     onSelectMode(mode)
-    onNavigate('capture')
+    onNavigate('modes')
   }
 
   const modeAccentClasses: Record<Mode, { hover: string; selected: string }> = {
@@ -272,9 +224,13 @@ function WeekendPlannerScreen() {
 }
 
 function App() {
-  const [screen, setScreen] = useState<Screen>('capture')
+  const [screen, setScreen] = useState<Screen>('modes')
   const [currentMode, setCurrentMode] = useLocalStorage<Mode | null>('night-modes-current-mode', null)
   const [modeDate, setModeDate] = useLocalStorage<string | null>('night-modes-mode-date', null)
+  const [sheetOpen, setSheetOpen] = useState(false)
+  const [captureText, setCaptureText] = useState('')
+  const [ideas, setIdeas] = useLocalStorage<Idea[]>('night-modes-ideas', [])
+  const captureInputRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
     const today = new Date().toDateString()
@@ -295,6 +251,24 @@ function App() {
     setModeDate(new Date().toDateString())
   }
 
+  const handleCapture = () => {
+    if (!captureText.trim()) return
+    const newIdea: Idea = {
+      id: Date.now(),
+      text: captureText.trim(),
+      timestamp: new Date().toISOString()
+    }
+    setIdeas([newIdea, ...ideas])
+    setCaptureText('')
+    setSheetOpen(false)
+  }
+
+  const handleCaptureKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && e.metaKey) {
+      handleCapture()
+    }
+  }
+
   const navBtnBase = 'flex-1 h-11 text-[0px] font-[inherit] bg-transparent border-none rounded-xl cursor-pointer transition-all duration-[250ms] ease-in-out flex items-center justify-center touch-manipulation relative'
   const navBtnActive = 'bg-[rgba(255,255,255,0.1)] text-text-primary shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06),0_2px_8px_rgba(0,0,0,0.2)]'
   const navBtnInactive = 'text-text-muted'
@@ -302,7 +276,6 @@ function App() {
   return (
     <div className="flex flex-1 flex-col px-6 py-4 pt-[env(safe-area-inset-top,1rem)] pb-[env(safe-area-inset-bottom,1rem)] max-w-[480px] mx-auto w-full">
       <div className="flex flex-1 flex-col">
-        {screen === 'capture' && <CaptureScreen />}
         {screen === 'modes' && (
           <ModeSelection
             currentMode={currentMode}
@@ -315,19 +288,45 @@ function App() {
         {screen === 'weekend' && <WeekendPlannerScreen />}
       </div>
 
-      <nav className="flex justify-center items-center gap-1 p-1 mt-auto bg-glass-bg backdrop-blur-[40px] backdrop-saturate-[1.8] border border-glass-border rounded-2xl shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05),0_4px_16px_rgba(0,0,0,0.3)]">
+      <div className="flex items-center gap-3 mt-auto">
+        <nav className="flex flex-1 justify-center items-center gap-1 p-1 bg-glass-bg backdrop-blur-[40px] backdrop-saturate-[1.8] border border-glass-border rounded-2xl shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05),0_4px_16px_rgba(0,0,0,0.3)]">
+          <button
+            className={`${navBtnBase} ${screen === 'modes' ? navBtnActive : navBtnInactive}`}
+            onClick={() => setScreen('modes')}
+            aria-label="Night Mode"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+            </svg>
+          </button>
+          <button
+            className={`${navBtnBase} ${screen === 'ideas' ? navBtnActive : navBtnInactive}`}
+            onClick={() => setScreen('ideas')}
+            aria-label="Ideas"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 18h6"/>
+              <path d="M10 22h4"/>
+              <path d="M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"/>
+            </svg>
+          </button>
+          <button
+            className={`${navBtnBase} ${screen === 'weekend' ? navBtnActive : navBtnInactive}`}
+            onClick={() => setScreen('weekend')}
+            aria-label="Weekend Planner"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2"/>
+              <line x1="16" y1="2" x2="16" y2="6"/>
+              <line x1="8" y1="2" x2="8" y2="6"/>
+              <line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+          </button>
+        </nav>
+
         <button
-          className={`${navBtnBase} ${screen === 'modes' ? navBtnActive : navBtnInactive}`}
-          onClick={() => setScreen('modes')}
-          aria-label="Night Mode"
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-          </svg>
-        </button>
-        <button
-          className={`${navBtnBase} flex-[1.2] ${screen === 'capture' ? 'bg-[rgba(255,255,255,0.14)] text-text-primary shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06),0_2px_8px_rgba(0,0,0,0.2)]' : navBtnInactive}`}
-          onClick={() => setScreen('capture')}
+          className="w-11 h-11 flex-shrink-0 bg-glass-bg backdrop-blur-[40px] backdrop-saturate-[1.8] border border-glass-border rounded-full cursor-pointer transition-all duration-[250ms] ease-in-out flex items-center justify-center touch-manipulation text-text-primary shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05),0_4px_16px_rgba(0,0,0,0.3)] active:scale-[0.95] active:bg-[rgba(255,255,255,0.14)]"
+          onClick={() => setSheetOpen(true)}
           aria-label="New Note"
         >
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -335,30 +334,30 @@ function App() {
             <line x1="5" y1="12" x2="19" y2="12"/>
           </svg>
         </button>
-        <button
-          className={`${navBtnBase} ${screen === 'ideas' ? navBtnActive : navBtnInactive}`}
-          onClick={() => setScreen('ideas')}
-          aria-label="Ideas"
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M9 18h6"/>
-            <path d="M10 22h4"/>
-            <path d="M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"/>
-          </svg>
-        </button>
-        <button
-          className={`${navBtnBase} ${screen === 'weekend' ? navBtnActive : navBtnInactive}`}
-          onClick={() => setScreen('weekend')}
-          aria-label="Weekend Planner"
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="3" y="4" width="18" height="18" rx="2"/>
-            <line x1="16" y1="2" x2="16" y2="6"/>
-            <line x1="8" y1="2" x2="8" y2="6"/>
-            <line x1="3" y1="10" x2="21" y2="10"/>
-          </svg>
-        </button>
-      </nav>
+      </div>
+
+      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+        <SheetContent side="bottom" className="bg-[rgba(20,20,22,0.95)] backdrop-blur-[40px] border-t border-glass-border rounded-t-2xl px-6 pb-[env(safe-area-inset-bottom,1.5rem)]">
+          <div className="flex flex-col gap-4 pt-2">
+            <textarea
+              ref={captureInputRef}
+              className="w-full min-h-[120px] p-4 text-base font-[inherit] bg-glass-bg backdrop-blur-[20px] border border-glass-border rounded-2xl text-text-primary resize-none outline-none transition-[border-color,background] duration-200 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)] focus:border-[rgba(255,255,255,0.25)] focus:bg-[rgba(255,255,255,0.08)] placeholder:text-text-muted"
+              placeholder="Capture an idea..."
+              value={captureText}
+              onChange={(e) => setCaptureText(e.target.value)}
+              onKeyDown={handleCaptureKeyDown}
+              autoFocus
+            />
+            <button
+              className="w-full px-6 py-4 text-base font-medium font-[inherit] border-none rounded-[14px] cursor-pointer transition-all duration-200 bg-[rgba(255,255,255,0.12)] backdrop-blur-[20px] text-text-primary border border-glass-border shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)] active:scale-[0.98] active:bg-[rgba(255,255,255,0.18)] disabled:opacity-40 disabled:cursor-not-allowed touch-manipulation"
+              onClick={handleCapture}
+              disabled={!captureText.trim()}
+            >
+              Capture
+            </button>
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   )
 }
