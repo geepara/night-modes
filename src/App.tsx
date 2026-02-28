@@ -21,7 +21,6 @@ interface ModeInfo {
 interface ModeSelectionProps {
   currentMode: Mode | null
   onSelectMode: (mode: Mode) => void
-  onNavigate: (screen: Screen) => void
 }
 
 // --- Data ---
@@ -65,11 +64,7 @@ function useLocalStorage<T>(key: string, initialValue: T): [T, Dispatch<SetState
 
 // --- Components ---
 
-function ModeSelection({ currentMode, onSelectMode, onNavigate }: ModeSelectionProps) {
-  const handleSelect = (mode: Mode) => {
-    onSelectMode(mode)
-    onNavigate('modes')
-  }
+function ModeSelection({ currentMode, onSelectMode }: ModeSelectionProps) {
 
   const modeAccentClasses: Record<Mode, { hover: string; selected: string }> = {
     recovery: {
@@ -97,7 +92,7 @@ function ModeSelection({ currentMode, onSelectMode, onNavigate }: ModeSelectionP
             <div
               key={key}
               className={`p-6 bg-glass-bg backdrop-blur-[20px] backdrop-saturate-[1.4] border border-glass-border rounded-2xl cursor-pointer transition-all duration-200 text-left shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)] active:scale-[0.98] ${accent.hover} ${isSelected ? accent.selected : ''}`}
-              onClick={() => handleSelect(key)}
+              onClick={() => onSelectMode(key)}
             >
               <div className="text-xl font-medium mb-2">{mode.name}</div>
               <div className="text-sm text-text-secondary">{mode.description}</div>
@@ -269,18 +264,26 @@ function App() {
     }
   }
 
+  const modeBgColors: Record<Mode, string> = {
+    recovery: 'rgba(74, 111, 165, 0.08)',
+    'recovery-creation': 'rgba(107, 91, 149, 0.08)',
+    ambition: 'rgba(212, 165, 116, 0.08)',
+  }
+
   const navBtnBase = 'flex-1 h-11 text-[0px] font-[inherit] bg-transparent border-none rounded-xl cursor-pointer transition-all duration-[250ms] ease-in-out flex items-center justify-center touch-manipulation relative'
   const navBtnActive = 'bg-[rgba(255,255,255,0.1)] text-text-primary shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06),0_2px_8px_rgba(0,0,0,0.2)]'
   const navBtnInactive = 'text-text-muted'
 
   return (
-    <div className="flex flex-1 flex-col px-6 py-4 pt-[env(safe-area-inset-top,1rem)] pb-[env(safe-area-inset-bottom,1rem)] max-w-[480px] mx-auto w-full">
+    <div
+      className="flex flex-1 flex-col px-6 py-4 pt-[env(safe-area-inset-top,1rem)] pb-[env(safe-area-inset-bottom,1rem)] max-w-[480px] mx-auto w-full transition-[background-color] duration-700 ease-in-out"
+      style={{ backgroundColor: currentMode ? modeBgColors[currentMode] : undefined }}
+    >
       <div className="flex flex-1 flex-col">
         {screen === 'modes' && (
           <ModeSelection
             currentMode={currentMode}
             onSelectMode={handleSelectMode}
-            onNavigate={setScreen}
           />
         )}
         {screen === 'ideas' && <IdeasScreen />}
