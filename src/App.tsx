@@ -22,6 +22,7 @@ interface ModeInfo {
 interface ModeSelectionProps {
   currentMode: Mode | null
   onSelectMode: (mode: Mode) => void
+  onHaptic: () => void
 }
 
 // --- Data ---
@@ -65,20 +66,20 @@ function useLocalStorage<T>(key: string, initialValue: T): [T, Dispatch<SetState
 
 // --- Components ---
 
-function ModeSelection({ currentMode, onSelectMode }: ModeSelectionProps) {
+function ModeSelection({ currentMode, onSelectMode, onHaptic }: ModeSelectionProps) {
 
   const modeAccentClasses: Record<Mode, { hover: string; selected: string }> = {
     recovery: {
       hover: 'hover:border-[rgba(74,111,165,0.5)] hover:bg-[rgba(74,111,165,0.1)]',
-      selected: 'border-[rgba(74,111,165,0.5)] bg-[rgba(74,111,165,0.1)]',
+      selected: 'border-[rgba(74,111,165,0.5)] bg-[rgba(74,111,165,0.15)]',
     },
     'recovery-creation': {
       hover: 'hover:border-[rgba(107,91,149,0.5)] hover:bg-[rgba(107,91,149,0.1)]',
-      selected: 'border-[rgba(107,91,149,0.5)] bg-[rgba(107,91,149,0.1)]',
+      selected: 'border-[rgba(107,91,149,0.5)] bg-[rgba(107,91,149,0.15)]',
     },
     ambition: {
       hover: 'hover:border-[rgba(212,165,116,0.5)] hover:bg-[rgba(212,165,116,0.1)]',
-      selected: 'border-[rgba(212,165,116,0.5)] bg-[rgba(212,165,116,0.1)]',
+      selected: 'border-[rgba(212,165,116,0.5)] bg-[rgba(212,165,116,0.15)]',
     },
   }
 
@@ -92,8 +93,8 @@ function ModeSelection({ currentMode, onSelectMode }: ModeSelectionProps) {
           return (
             <div
               key={key}
-              className={`p-6 bg-glass-bg backdrop-blur-[20px] backdrop-saturate-[1.4] border border-glass-border rounded-2xl cursor-pointer transition-all duration-200 text-left shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)] active:scale-[0.98] ${accent.hover} ${isSelected ? accent.selected : ''}`}
-              onClick={() => onSelectMode(key)}
+              className={`p-6 bg-glass-bg backdrop-blur-[20px] backdrop-saturate-[1.4] border border-glass-border rounded-2xl cursor-pointer transition-all duration-200 text-left ${accent.hover} ${isSelected ? `${accent.selected} scale-[0.97] shadow-[inset_0_2px_6px_rgba(0,0,0,0.3),inset_0_1px_2px_rgba(0,0,0,0.2)]` : 'shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)] active:scale-[0.98]'}`}
+              onClick={() => { onHaptic(); onSelectMode(key) }}
             >
               <div className="text-xl font-medium mb-2">{mode.name}</div>
               <div className="text-sm text-text-secondary">{mode.description}</div>
@@ -290,6 +291,7 @@ function App() {
           <ModeSelection
             currentMode={currentMode}
             onSelectMode={handleSelectMode}
+            onHaptic={() => haptic('nudge')}
           />
         )}
         {screen === 'ideas' && <IdeasScreen />}
